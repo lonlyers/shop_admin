@@ -36,8 +36,8 @@
         @size-change="handleSizeChange"
         @current-change="handleCurrentChange"
         :current-page="currentPage4"
-        :page-sizes="[pagesize]"
-        :page-size="100"
+        :page-sizes="[2,4,]"
+        :page-size="pagesize"
         layout="total, sizes, prev, pager, next, jumper"
         :total="total"
       ></el-pagination>
@@ -87,9 +87,13 @@ export default {
     },
     handleSizeChange (val) {
       console.log(`每页 ${val} 条`)
+      this.pagesize = `${val}`
+      this.getUserList()
     },
     handleCurrentChange (val) {
       console.log(`当前页: ${val}`)
+      this.pagenum = `${val}`
+      this.getUserList()
     }
   }
 }
