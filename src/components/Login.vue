@@ -57,6 +57,7 @@ export default {
           if (meta.status === 200) {
             // console.log(meta.msg)
             this.$message.success(meta.msg)
+            localStorage.setItem('token', res.data.data.token)
             this.$router.push('/index')
           } else {
             // console.log(meta.msg)
