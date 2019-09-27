@@ -30,7 +30,7 @@
           </el-table-column>
           <el-table-column prop label="操作">
             <template v-slot:default="obj">
-              <el-button plain size="small" type="primary" icon="el-icon-edit"></el-button>
+              <el-button plain size="small" type="primary" icon="el-icon-edit" @click="editUser(obj.row)"></el-button>
               <el-button
                 plain
                 size="small"
@@ -56,7 +56,13 @@
       ></el-pagination>
     </div>
     <!-- 添加用户弹出框 -->
-    <el-dialog title="添加用户"  :visible.sync="dialogFormVisible" label-width="300px">
+    <el-dialog
+      title="添加用户"
+      width="40%"
+      @close="closedialog"
+      :visible.sync="dialogFormVisible"
+      label-width="300px"
+    >
       <el-form :model="form" :rules="rules" ref="addForm" status-icon>
         <el-form-item label="用户名" :label-width="formLabelWidth" prop="username">
           <el-input v-model="form.username" autocomplete="off"></el-input>
@@ -64,16 +70,39 @@
         <el-form-item label="密码" :label-width="formLabelWidth" prop="password">
           <el-input v-model="form.password" type="password" autocomplete="off"></el-input>
         </el-form-item>
-        <el-form-item label="邮箱" :label-width="formLabelWidth">
-          <el-input v-model="form.email" autocomplete="off"></el-input>
+        <el-form-item prop="email" label="邮箱" :label-width="formLabelWidth">
+          <el-input v-model="form.email"></el-input>
         </el-form-item>
-        <el-form-item label="电话" :label-width="formLabelWidth">
+        <el-form-item label="电话" :label-width="formLabelWidth" prop="mobile">
           <el-input v-model="form.mobile" autocomplete="off"></el-input>
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
         <el-button @click="dialogFormVisible = false">取 消</el-button>
         <el-button type="primary" @click="addUsers">确 定</el-button>
+      </div>
+    </el-dialog>
+    <!-- 修改用户弹出框 -->
+    <el-dialog
+      title="修改用户"
+      width="40%"
+      :visible.sync="editFormVisible"
+      label-width="300px"
+    >
+      <el-form :model="editForm" :rules="rules" ref="editForm" status-icon>
+        <el-form-item label="用户名" :label-width="formLabelWidth" prop="username">
+          <el-tag type="info">{{editForm.username}}</el-tag>
+        </el-form-item>
+        <el-form-item prop="email" label="邮箱" :label-width="formLabelWidth">
+          <el-input v-model="editForm.email"></el-input>
+        </el-form-item>
+        <el-form-item label="电话" :label-width="formLabelWidth" prop="mobile">
+          <el-input v-model="editForm.mobile" autocomplete="off"></el-input>
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="editFormVisible = false">取 消</el-button>
+        <el-button type="primary" @click="editUsers">确 定</el-button>
       </div>
     </el-dialog>
   </div>
@@ -89,9 +118,16 @@ export default {
       pagesize: 4,
       total: 0,
       dialogFormVisible: false,
+      editFormVisible: false,
       form: {
         username: '',
         password: '',
+        email: '',
+        mobile: ''
+      },
+      editForm: {
+        id: '',
+        username: '',
         email: '',
         mobile: ''
       },
@@ -104,6 +140,20 @@ export default {
         password: [
           { required: true, message: '请输入用户密码', trigger: 'blur' },
           { min: 5, max: 12, message: '长度在 5 到 12 个字符', trigger: 'blur' }
+        ],
+        email: [
+          {
+            type: 'email',
+            message: '请输入正确的邮箱地址',
+            trigger: ['blur', 'change']
+          }
+        ],
+        mobile: [
+          {
+            pattern: /^1[3-9]\d{9}$/,
+            message: '请输入正确的手机号',
+            trigger: ['blur', 'change']
+          }
         ]
       }
     }
@@ -195,7 +245,6 @@ export default {
     async addUsers () {
       try {
         await this.$refs.addForm.validate()
-
         // console.log(1)
         const res = await this.$axios.post('users', {
           username: this.form.username,
@@ -205,11 +254,39 @@ export default {
         })
         if (res.meta.status === 201) {
           this.$message.success('添加成功')
+          this.dialogFormVisible = false
+          this.total++
+          this.pagenum = Math.ceil(this.total / this.pagesize)
+          this.getUserList()
         } else {
           this.$message.error(res.meta.msg)
         }
-        this.dialogFormVisible = false
-        this.getUserList()
+      } catch (error) {
+        console.log(error)
+      }
+    },
+    closedialog () {
+      this.$refs.addForm.resetFields()
+    },
+    editUser (row) {
+      this.editFormVisible = true
+      // console.log(row)
+      this.editForm.username = row.username
+      this.editForm.email = row.email
+      this.editForm.mobile = row.mobile
+      this.editForm.id = row.id
+    },
+    async editUsers () {
+      try {
+        const { id, email, mobile } = this.editForm
+        const { meta } = await this.$axios.put(`users/${id}`, { id, email, mobile })
+        if (meta.status === 200) {
+          this.$message.success('更新成功')
+          this.editFormVisible = false
+          this.getUserList()
+        } else {
+          this.$message.error(meta.msg)
+        }
       } catch (error) {
         console.log(error)
       }
