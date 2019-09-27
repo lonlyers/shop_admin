@@ -17,7 +17,6 @@
 </template>
 
 <script>
-import axios from 'axios'
 export default {
   data () {
     return {
@@ -45,26 +44,28 @@ export default {
     reset () {
       this.$refs.form.resetFields()
     },
-    login () {
-      this.$refs.form.validate((isValid) => {
-        if (!isValid) return
-        axios({
+    async login () {
+      try {
+        this.$refs.form.validate()
+        const res = await this.$axios({
           method: 'post',
-          url: 'http://localhost:8888/api/private/v1/login',
+          url: 'login',
           data: this.form
-        }).then(res => {
-          const { meta } = res.data
-          if (meta.status === 200) {
-            // console.log(meta.msg)
-            this.$message.success(meta.msg)
-            localStorage.setItem('token', res.data.data.token)
-            this.$router.push('/index')
-          } else {
-            // console.log(meta.msg)
-            this.$message.error(meta.msg)
-          }
         })
-      })
+        console.log(res)
+
+        if (res.meta.status === 200) {
+          // console.log(meta.msg)
+          localStorage.setItem('token', res.data.token)
+          this.$router.push('/index')
+          this.$message.success(res.meta.msg)
+        } else {
+          // console.log(res.meta.msg)
+          this.$message.error(res.meta.msg)
+        }
+      } catch (error) {
+        console.log(error)
+      }
     }
   }
 }
