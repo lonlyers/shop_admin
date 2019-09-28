@@ -52,24 +52,26 @@
             icon="el-icon-delete"
             @click="deletUsers(obj.row)"
           ></el-button>
-          <el-button plain size="small" type="success" icon="el-icon-check" @click="grantUser">分配角色</el-button>
+          <el-button plain size="small" type="success" icon="el-icon-check" @click="grantUser(obj.row)">分配角色</el-button>
         </template>
       </el-table-column>
     </el-table>
+    <!-- 树形控件 -->
     <el-dialog title="提示" :visible.sync="dialogVisible" width="30%">
       <span>
         <el-tree
           :data="data"
           show-checkbox
           node-key="id"
-          :default-expanded-keys="[2, 3]"
-          :default-checked-keys="[5]"
+          ref="tree"
+          default-expand-all
+          :default-checked-keys='arrids'
           :props="defaultProps"
         ></el-tree>
       </span>
       <span slot="footer" class="dialog-footer">
         <el-button @click="dialogVisible = false">取 消</el-button>
-        <el-button type="primary">分配</el-button>
+        <el-button type="primary" @click="fpxuanxian">分配</el-button>
       </span>
     </el-dialog>
 
@@ -90,6 +92,23 @@
         <el-button type="primary" @click="adduser">确 定</el-button>
       </span>
     </el-dialog>
+    <!--修改 -->
+        <el-dialog title="修改角色" :visible.sync="edituserVisible" width="40%">
+      <span>
+        <el-form :model="edituserForm" status-icon :rules="rules" ref="edituserForm" label-width="100px" class="demo-ruleForm">
+            <el-form-item label="角色名称" prop="roleName">
+              <el-input  v-model="edituserForm.roleName" autocomplete="off"></el-input>
+            </el-form-item>
+            <el-form-item label="角色描述" prop="roleDesc">
+              <el-input  v-model="edituserForm.roleDesc" autocomplete="off"></el-input>
+            </el-form-item>
+        </el-form>
+      </span>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="edituserVisible = false">取 消</el-button>
+        <el-button type="primary" @click="editUsers">确 定</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 
@@ -99,9 +118,19 @@ export default {
     return {
       dialogVisible: false,
       adduserVisible: false,
+      edituserVisible: false,
       tableData: [],
       data: [],
+      arrids: [],
+      roleId: '',
+      arrid: [],
       adduserForm: {
+        id: '',
+        roleName: '',
+        roleDesc: ''
+      },
+      edituserForm: {
+        id: '',
         roleName: '',
         roleDesc: ''
       },
@@ -149,10 +178,39 @@ export default {
       }
     },
     // 分配权限
-    async grantUser () {
+    async grantUser (row) {
       this.dialogVisible = true
       const { data } = await this.$axios.get('rights/tree')
       this.data = data
+      this.roleId = row.id
+      this.arrids = []
+      // console.log(1)
+      row.children.forEach(l1 => {
+        this.arrids.push(l1.id)
+        l1.children.forEach(l2 => {
+          this.arrids.push(l2.id)
+          l2.children.forEach(l3 => {
+            this.arrids.push(l3.id)
+          })
+        })
+      })
+    },
+    // 分配角色权限
+    async fpxuanxian  () {
+      const ids = this.$refs.tree.getCheckedKeys()
+      const halfs = this.$refs.tree.getHalfCheckedKeys()
+      const rids = [...ids, ...halfs].join(',')
+      // console.log(this.roleId)
+
+      const { meta } = await this.$axios.post(`roles/${this.roleId}/rights`, { rids })
+      // console.log(res)
+      if (meta.status === 200) {
+        this.$message.success('更新成功')
+        this.dialogVisible = false
+        this.getUserlist()
+      } else {
+        this.$message.error(meta.msg)
+      }
     },
     // 删除角色指定权限
     async delqx (row, obj) {
@@ -173,7 +231,7 @@ export default {
         await this.$refs.adduserForm.validate()
         const { meta } = await this.$axios.post('roles', this.adduserForm)
         // console.log(res)4
-        if (meta.status === 201) {
+        if (meta.status === 201 || meta.status === 200) {
           this.$message.success('添加成功')
           this.$refs.adduserForm.resetFields()
           this.adduserVisible = false
@@ -183,6 +241,28 @@ export default {
         }
       } catch (error) {
         console.log(error)
+      }
+    },
+    // 修改
+    editUser (row) {
+      // console.log(row)
+      this.roleId = row.id
+      this.edituserForm.roleName = row.roleName
+      this.edituserForm.roleDesc = row.roleDesc
+      this.edituserVisible = true
+    },
+    async editUsers () {
+      const roleName = this.edituserForm.roleName
+      const roleDesc = this.edituserForm.roleDesc
+
+      const { meta } = await this.$axios.put(`roles/${this.roleId}`, { roleName, roleDesc })
+      // console.log(meta)
+      if (meta.status === 200) {
+        this.$message.success('修改成功')
+        this.edituserVisible = false
+        this.getUserlist()
+      } else {
+        this.$message.success(meta.msg)
       }
     }
   }
